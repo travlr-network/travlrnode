@@ -1,3 +1,7 @@
+import { EthereumPlugin } from './EthereumPlugin';
+import { SuiPlugin } from './SuiPlugin';
+import { RestApiPlugin } from './RestApiPlugin';
+
 export interface BlockchainPlugin {
     connect(): Promise<void>;
     disconnect(): Promise<void>;
