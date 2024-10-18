@@ -12,9 +12,12 @@ import { PublicBlockchainDIDResolver } from './PublicBlockchainDIDResolver';
 import { DIDResolver } from 'did-resolver';
 import { MemoryKeyStore } from '@veramo/key-manager';
 import { MemoryDIDStore } from '@veramo/did-manager';
+import { PrivateKeyStore } from '@veramo/data-store';
+import { DataSource } from 'typeorm';
 
 interface VeramoPluginOptions {
-  secretKey: string;
+  dbConnection: Promise<DataSource>;
+  secretKey?: string;
   didProvider: 'ethereum' | 'rest';
   ethereumConfig?: {
     infuraProjectId: string;
@@ -53,8 +56,8 @@ export class VeramoPlugin {
       });
     }
 
-    const secretBox = new SecretBox(secretKey);
-    const privateKeyStore = secretBox;
+    const secretBox = options.secretKey ? new SecretBox(options.secretKey) : undefined;
+    const privateKeyStore = new PrivateKeyStore(options.dbConnection, secretBox);
 
     const ethrDidResolverConfig = {
       networks: [
@@ -111,7 +114,8 @@ export class VeramoPlugin {
       },
       key: {
         type: 'Secp256k1',
-        // You may need to add additional key options depending on your requirements
+        // Remove the comment below and specify the actual key algorithm
+        algorithm: 'ES256K'
       }
     });
   }
