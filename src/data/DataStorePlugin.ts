@@ -3,6 +3,8 @@ import { FileDataStorePlugin } from "./FileDataStorePlugin";
 export interface DataStorePlugin {
   setData(key: string, value: any): Promise<void>;
   getData(key: string): Promise<any>;
+  getAllKeys(): Promise<string[]>;
+  deleteData(key: string): Promise<void>;
 }
 
 export function createDataStorePlugin(type: string, config: any): DataStorePlugin {

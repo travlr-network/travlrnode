@@ -26,4 +26,20 @@ export class FileDataStorePlugin implements DataStorePlugin {
       throw error;
     }
   }
+
+  async getAllKeys(): Promise<string[]> {
+    const files = await fs.readdir(this.dataDir);
+    return files.filter(file => file.endsWith('.json')).map(file => path.parse(file).name);
+  }
+
+  async deleteData(key: string): Promise<void> {
+    const filePath = path.join(this.dataDir, `${key}.json`);
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
 }

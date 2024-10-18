@@ -4,8 +4,12 @@ import { createP2PNodePlugin } from './p2p/P2PNodePlugin';
 import { createDataStorePlugin } from './data/DataStorePlugin';
 import { RestApi } from './api/RestApi';
 import { VeramoPlugin } from './did/VeramoPlugin';
+import { config } from 'dotenv';
 
 export async function runNode() {
+  // Load environment variables
+  config();
+
   const blockchainType = process.env.BLOCKCHAIN_TYPE || 'rest';
   const blockchain = createBlockchainPlugin(blockchainType, {
     // ... blockchain configuration ...
@@ -25,7 +29,7 @@ export async function runNode() {
 
   const didProvider = process.env.DID_PROVIDER as 'ethereum' | 'rest';
   let veramoConfig: any = {
-    secretKey: process.env.VERAMO_SECRET_KEY!,
+    secretKey: process.env.VERAMO_SECRET_KEY,
     didProvider: didProvider,
   };
 
@@ -40,9 +44,9 @@ export async function runNode() {
     };
   }
 
-  const veramo = new VeramoPlugin(veramoConfig);
+  const veramoPlugin = new VeramoPlugin(veramoConfig);
 
-  const restApi = new RestApi(blockchain, p2pNode, accessControl, dataStore, veramo);
+  const restApi = new RestApi(blockchain, p2pNode, accessControl, dataStore, veramoPlugin);
 
   await blockchain.connect();
   console.log('Connected to blockchain');
@@ -52,5 +56,5 @@ export async function runNode() {
   const apiPort = parseInt(process.env.API_PORT!) || 3000;
   restApi.start(apiPort);
 
-  return { blockchain, p2pNode, accessControl, dataStore, veramo, restApi };
+  return { blockchain, p2pNode, accessControl, dataStore, veramoPlugin, restApi };
 }

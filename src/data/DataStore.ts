@@ -7,6 +7,10 @@ export class DataStore {
     this.dataStore = dataStore;
   }
 
+  getDataStorePlugin(): DataStorePlugin {
+    return this.dataStore;
+  }
+
   async storeDataset(datasetId: string, data: any): Promise<void> {
     await this.dataStore.setData(`dataset:${datasetId}`, data);
   }

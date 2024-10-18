@@ -10,9 +10,17 @@ async function runTestMode() {
   const publicBlockchain = new PublicBlockchainApi();
   await publicBlockchain.start();
 
-  const { blockchain, p2pNode, accessControl, dataStore, veramo, restApi } = await runNode();
+  const { blockchain, p2pNode, accessControl, dataStore, veramoPlugin: veramo, restApi } = await runNode();
+
+  // Add debug logging
+  console.log('Initialized components:', { blockchain, p2pNode, accessControl, dataStore, veramo, restApi });
 
   try {
+    // Check if veramo is properly initialized
+    if (!veramo) {
+      throw new Error('Veramo plugin is not initialized');
+    }
+
     // Example usage for testing
     const userIdentifier = await veramo.createDID();
     const orgIdentifier = await veramo.createDID();
@@ -47,7 +55,9 @@ async function runTestMode() {
     });
   } catch (error) {
     console.error('An error occurred:', error);
-    await publicBlockchain.stop();
+    if (publicBlockchain && typeof publicBlockchain.stop === 'function') {
+      await publicBlockchain.stop();
+    }
     process.exit(1);
   }
 }
