@@ -7,7 +7,8 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "testmode": "tsx src/testMode.ts"
   },
   "dependencies": {
     "@chainsafe/libp2p-gossipsub": "^14.1.0",
