@@ -1,29 +1,31 @@
-import Gun from 'gun';
+import { BlockchainPlugin } from '../blockchain/BlockchainPlugin';
 
 export class AccessControl {
-    private gun: Gun;
+    private blockchain: BlockchainPlugin;
 
-    constructor(gun: Gun) {
-        this.gun = gun;
+    constructor(blockchain: BlockchainPlugin) {
+        this.blockchain = blockchain;
     }
 
-    async grantAccess(userPubKey: string, dataKey: string): Promise<void> {
-        await this.gun.get(`access_control/${dataKey}`).set(userPubKey);
+    async grantAccess(granterDID: string, granteeDID: string, dataKey: string, expirationTime: number): Promise<string> {
+        return this.blockchain.grantAccess(granterDID, granteeDID, dataKey, expirationTime);
     }
 
-    async revokeAccess(userPubKey: string, dataKey: string): Promise<void> {
-        await this.gun.get(`access_control/${dataKey}`).unset(userPubKey);
+    async revokeAccess(revokerDID: string, granteeDID: string, dataKey: string): Promise<string> {
+        return this.blockchain.revokeAccess(revokerDID, granteeDID, dataKey);
     }
 
-    async hasAccess(userPubKey: string, dataKey: string): Promise<boolean> {
-        return new Promise((resolve) => {
-            this.gun.get(`access_control/${dataKey}`).once((data) => {
-                if (data) {
-                    resolve(Object.keys(data).includes(userPubKey));
-                } else {
-                    resolve(false);
-                }
-            });
-        });
+    async hasAccess(did: string, dataKey: string): Promise<boolean> {
+        return this.blockchain.checkAccess(did, dataKey);
+    }
+
+    addOrganization(did: string) {
+        // Existing implementation
+    }
+
+    addIndividual(did: string) {
+        // Add implementation for individual registration
+        // For example:
+        // this.individuals.add(did);
     }
 }

@@ -1,54 +1,22 @@
 import dotenv from 'dotenv';
-import { createBlockchainPlugin, BlockchainPlugin } from './blockchain/BlockchainPlugin';
-import { EthereumPlugin } from './blockchain/EthereumPlugin';
-import { SuiPlugin } from './blockchain/SuiPlugin';
-import { RestApiPlugin } from './blockchain/RestApiPlugin';
-import { DataStore } from './data/DataStore';
+import { createBlockchainPlugin } from './blockchain/BlockchainPlugin';
 import { AccessControl } from './data/AccessControl';
 import { P2PNode } from './p2p/P2PNode';
+import { FileDataStore } from './data/DataStore';
 import { RestApi } from './api/RestApi';
-import { PublicBlockchainApi } from './testing/PublicBlockchainApi';
 
 dotenv.config();
 
 async function main() {
   const blockchainType = process.env.BLOCKCHAIN_TYPE || 'rest';
-  let blockchain: BlockchainPlugin;
+  const blockchain = createBlockchainPlugin(blockchainType, {
+    // ... blockchain configuration ...
+  });
 
-  const publicApiPort = parseInt(process.env.PUBLIC_API_PORT!) || 3000;
-  const restApiPort = parseInt(process.env.REST_API_PORT!) || 3001;
-
-  switch (blockchainType) {
-    case 'ethereum':
-      blockchain = new EthereumPlugin({
-        rpcUrl: process.env.ETH_RPC_URL!,
-        privateKey: process.env.ETH_PRIVATE_KEY!,
-        contractAddress: process.env.ETH_CONTRACT_ADDRESS!
-      });
-      break;
-    case 'sui':
-      blockchain = new SuiPlugin({
-        rpcUrl: process.env.SUI_RPC_URL!,
-        privateKey: process.env.SUI_PRIVATE_KEY!,
-        contractAddress: process.env.SUI_CONTRACT_ADDRESS!,
-        moduleId: process.env.SUI_MODULE_ID!
-      });
-      break;
-    case 'rest':
-    default:
-      blockchain = new RestApiPlugin({
-        baseUrl: process.env.REST_API_BASE_URL!
-      });
-      // Start the public blockchain API for testing
-      const publicBlockchainApi = new PublicBlockchainApi();
-      publicBlockchainApi.start(restApiPort);
-      break;
-  }
-
-  const dataStore = new DataStore();
-  const accessControl = new AccessControl();
-  const p2pNode = new P2PNode(dataStore, accessControl);
-  const restApi = new RestApi(blockchain, p2pNode);
+  const dataStore = new FileDataStore(); // Or SQLiteDataStore
+  const accessControl = new AccessControl(blockchain);
+  const p2pNode = new P2PNode(accessControl, dataStore, { useGun: true });
+  const restApi = new RestApi(blockchain, p2pNode, accessControl, dataStore);
 
   try {
     await blockchain.connect();
@@ -56,7 +24,8 @@ async function main() {
 
     await p2pNode.start();
 
-    restApi.start(publicApiPort);
+    const apiPort = parseInt(process.env.API_PORT!) || 3000;
+    restApi.start(apiPort);
 
     // Example usage
     const userDID = 'did:example:user1';
@@ -66,9 +35,9 @@ async function main() {
     await blockchain.registerNode(userDID, false);
     await blockchain.registerNode(orgDID, true);
 
-    await blockchain.grantAccess(userDID, orgDID, dataKey, Date.now() + 86400000);
+    await accessControl.grantAccess(userDID, orgDID, dataKey, Date.now() + 86400000);
 
-    const hasAccess = await blockchain.checkAccess(orgDID, dataKey);
+    const hasAccess = await accessControl.hasAccess(orgDID, dataKey);
     console.log(`Organization has access: ${hasAccess}`);
 
     // Keep the application running

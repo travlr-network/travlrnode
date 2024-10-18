@@ -1,105 +1,62 @@
 import Gun from 'gun';
-import 'gun/sea';
+import { Libp2p } from 'libp2p';
 import { DataStore } from '../data/DataStore';
 import { AccessControl } from '../data/AccessControl';
 
 export class P2PNode {
-  private gun: Gun;
-  private dataStore: DataStore;
+  private gun: Gun | null = null;
+  private libp2p: Libp2p | null = null;
   private accessControl: AccessControl;
-  private peers: string[];
+  private dataStore: DataStore;
 
-  constructor(peers: string[] = []) {
-    this.peers = peers;
-    this.gun = Gun({ peers: this.peers });
-    this.dataStore = new DataStore(this.gun);
-    this.accessControl = new AccessControl(this.gun);
+  constructor(accessControl: AccessControl, dataStore: DataStore, config: { useGun: boolean }) {
+    this.accessControl = accessControl;
+    this.dataStore = dataStore;
+
+    if (config.useGun) {
+      this.gun = Gun();
+    } else {
+      // Initialize libp2p here
+      // this.libp2p = ...
+    }
   }
 
   async start(): Promise<void> {
+    if (this.libp2p) {
+      await this.libp2p.start();
+    }
     console.log('P2P node started');
-    this.setupDataHandlers();
   }
 
   async stop(): Promise<void> {
-    // Gun doesn't have a built-in stop method, but we can disconnect from peers
-    this.peers.forEach(peer => this.gun.bye(peer));
+    if (this.libp2p) {
+      await this.libp2p.stop();
+    }
     console.log('P2P node stopped');
   }
 
-  private setupDataHandlers(): void {
-    this.gun.on('put', (data: any) => {
-      const { key, value, _: { '#': messageId, '>': { [key]: lastUpdate } = {} } } = data;
-      this.handleDataUpdate(key, value, messageId, lastUpdate);
-    });
-  }
-
-  private handleDataUpdate(key: string, value: any, messageId: string, lastUpdate: number): void {
-    console.log(`Received data update for ${key}`);
-    // Here you can implement access control checks and data storage
-    if (this.accessControl.hasAccess(this.gun.user().is.pub, key)) {
-      this.dataStore.setData(key, value, lastUpdate);
-    }
-  }
-
-  async requestData(dataKey: string): Promise<void> {
-    const userPubKey = this.gun.user().is.pub;
-    if (await this.accessControl.hasAccess(userPubKey, dataKey)) {
-      const data = await this.dataStore.getData(dataKey);
-      if (data) {
-        console.log(`Received data for ${dataKey}`);
-        // Handle the received data as needed
+  async sendData(peerId: string, dataKey: string, data: any): Promise<void> {
+    if (await this.accessControl.hasAccess(peerId, dataKey)) {
+      if (this.gun) {
+        this.gun.get(dataKey).put(data);
+      } else if (this.libp2p) {
+        // Implement libp2p data sending logic
       }
+    } else {
+      throw new Error('Access denied');
     }
   }
 
-  async setData(dataKey: string, data: any): Promise<void> {
-    const userPubKey = this.gun.user().is.pub;
-    if (await this.accessControl.hasAccess(userPubKey, dataKey)) {
-      this.dataStore.setData(dataKey, data);
+  async receiveData(dataKey: string): Promise<any> {
+    if (this.gun) {
+      return new Promise((resolve) => {
+        this.gun!.get(dataKey).once((data) => {
+          resolve(data);
+        });
+      });
+    } else if (this.libp2p) {
+      // Implement libp2p data receiving logic
     }
-  }
-
-  async connectToPeer(peerUrl: string): Promise<void> {
-    this.gun.opt({ peers: [...this.peers, peerUrl] });
-    this.peers.push(peerUrl);
-    console.log(`Connected to peer: ${peerUrl}`);
-  }
-
-  getPeerId(): string {
-    return this.gun.user().is.pub || '';
-  }
-
-  getPeers(): string[] {
-    return this.peers;
-  }
-
-  // User authentication methods
-  async createUser(username: string, password: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.gun.user().create(username, password, (ack: any) => {
-        if (ack.err) {
-          reject(new Error(ack.err));
-        } else {
-          resolve();
-        }
-      });
-    });
-  }
-
-  async login(username: string, password: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.gun.user().auth(username, password, (ack: any) => {
-        if (ack.err) {
-          reject(new Error(ack.err));
-        } else {
-          resolve();
-        }
-      });
-    });
-  }
-
-  logout(): void {
-    this.gun.user().leave();
+    throw new Error('No P2P implementation available');
   }
 }
