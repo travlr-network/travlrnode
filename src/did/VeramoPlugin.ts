@@ -9,6 +9,9 @@ import { Resolver } from 'did-resolver';
 import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
 import { PublicBlockchainDIDProvider } from './PublicBlockchainDIDProvider';
 import { PublicBlockchainDIDResolver } from './PublicBlockchainDIDResolver';
+import { DIDResolver } from 'did-resolver';
+import { MemoryKeyStore } from '@veramo/key-manager';
+import { MemoryDIDStore } from '@veramo/did-manager';
 
 interface VeramoPluginOptions {
   secretKey: string;
@@ -24,7 +27,7 @@ interface VeramoPluginOptions {
 
 export class VeramoPlugin {
   private agent: any;
-  private didProvider: string;
+  private didProvider: 'ethereum' | 'rest';
 
   constructor(options: VeramoPluginOptions) {
     const secretKey = options.secretKey;
@@ -51,12 +54,13 @@ export class VeramoPlugin {
     }
 
     const secretBox = new SecretBox(secretKey);
+    const privateKeyStore = secretBox;
 
     const ethrDidResolverConfig = {
       networks: [
         {
-          name: process.env.ETHEREUM_NETWORK || 'mainnet',
-          rpcUrl: `https://${process.env.ETHEREUM_NETWORK || 'mainnet'}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+          name: options.ethereumConfig?.network || 'mainnet',
+          rpcUrl: `https://${options.ethereumConfig?.network || 'mainnet'}.infura.io/v3/${options.ethereumConfig?.infuraProjectId || process.env.INFURA_PROJECT_ID}`,
         },
       ],
     };
@@ -71,16 +75,20 @@ export class VeramoPlugin {
 
     const resolver = new Resolver(resolvers);
 
+    const kms = new KeyManagementSystem(privateKeyStore);
+
+    const didStore = new MemoryDIDStore()
+
     this.agent = createAgent({
       plugins: [
         new KeyManager({
-          store: new KeyManagementSystem(secretBox),
+          store: new MemoryKeyStore(),
           kms: {
-            local: new KeyManagementSystem(secretBox),
+            local: kms,
           },
         }),
         new DIDManager({
-          store: new KeyManagementSystem(secretBox),
+          store: didStore,
           defaultProvider: options.didProvider === 'ethereum' ? 'did:ethr' : 'did:public',
           providers: didProviders,
         }),
@@ -88,14 +96,24 @@ export class VeramoPlugin {
           resolver,
         }),
         new CredentialIssuer(),
-        new W3cMessageHandler(),
       ],
     });
   }
 
   async createDID(options?: { isOrganization?: boolean }): Promise<IIdentifier> {
     const provider = this.didProvider === 'ethereum' ? 'did:ethr' : 'did:public';
-    return await this.agent.didManagerCreate({ provider, options });
+    return await this.agent.didManagerCreate({
+      provider,
+      alias: options?.isOrganization ? 'organization' : 'individual',
+      kms: 'local',
+      options: {
+        // Add any provider-specific options here if needed
+      },
+      key: {
+        type: 'Secp256k1',
+        // You may need to add additional key options depending on your requirements
+      }
+    });
   }
 
   async issueVC(issuerDID: string, subjectDID: string, claims: any): Promise<any> {
