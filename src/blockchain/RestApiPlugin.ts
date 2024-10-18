@@ -3,10 +3,12 @@ import axios, { AxiosInstance } from 'axios';
 
 export class RestApiPlugin implements BlockchainPlugin {
   private api: AxiosInstance;
+  private baseUrl: string;
 
   constructor(config: { baseUrl: string }) {
+    this.baseUrl = config.baseUrl;
     this.api = axios.create({
-      baseURL: config.baseUrl,
+      baseURL: this.baseUrl,
       timeout: 10000,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -20,11 +22,21 @@ export class RestApiPlugin implements BlockchainPlugin {
     // No disconnection needed for REST API
   }
 
-  async registerNode(did: string, isOrganization: boolean): Promise<string> {
+  async registerNode(): Promise<void> {
     try {
-      const response = await this.api.post('/register-node', { did, isOrganization });
-      return response.data.transactionId;
+      const url = `${this.baseUrl}/register-node`;
+      console.log(`Attempting to register node at: ${url}`);
+      const response = await this.api.post('/register-node', {
+        // Node registration data
+      });
+      console.log('Registration response:', response.data);
+      // Handle successful registration
     } catch (error) {
+      console.error('Full error object:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+      }
       throw new Error(`Failed to register node: ${error}`);
     }
   }

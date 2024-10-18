@@ -15,6 +15,9 @@ async function main() {
   const blockchainType = process.env.BLOCKCHAIN_TYPE || 'rest';
   let blockchain: BlockchainPlugin;
 
+  const publicApiPort = parseInt(process.env.PUBLIC_API_PORT!) || 3000;
+  const restApiPort = parseInt(process.env.REST_API_PORT!) || 3001;
+
   switch (blockchainType) {
     case 'ethereum':
       blockchain = new EthereumPlugin({
@@ -38,7 +41,7 @@ async function main() {
       });
       // Start the public blockchain API for testing
       const publicBlockchainApi = new PublicBlockchainApi();
-      publicBlockchainApi.start(parseInt(process.env.API_PORT!) || 3000);
+      publicBlockchainApi.start(restApiPort);
       break;
   }
 
@@ -53,8 +56,7 @@ async function main() {
 
     await p2pNode.start();
 
-    const apiPort = parseInt(process.env.API_PORT!) || 3001;
-    restApi.start(apiPort);
+    restApi.start(publicApiPort);
 
     // Example usage
     const userDID = 'did:example:user1';

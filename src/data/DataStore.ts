@@ -1,24 +1,40 @@
+import Gun from 'gun';
+
 export class DataStore {
-    private store: Map<string, any[]> = new Map();
-  
-    addData(key: string, value: any): void {
-      if (!this.store.has(key)) {
-        this.store.set(key, []);
-      }
-      this.store.get(key)!.push({
-        value,
-        timestamp: Date.now(),
-        version: this.store.get(key)!.length
-      });
-    }
-  
-    getLatestData(key: string): any | null {
-      const versions = this.store.get(key);
-      return versions ? versions[versions.length - 1] : null;
-    }
-  
-    getSnapshot(key: string, version: number): any | null {
-      const versions = this.store.get(key);
-      return versions ? versions.find(v => v.version === version) : null;
-    }
+  private gun: Gun;
+
+  constructor(gun: Gun) {
+    this.gun = gun;
   }
+
+  setData(key: string, value: any, timestamp?: number): void {
+    this.gun.get(key).put({
+      value,
+      timestamp: timestamp || Date.now()
+    });
+  }
+
+  getData(key: string): Promise<any> {
+    return new Promise((resolve) => {
+      this.gun.get(key).once((data) => {
+        resolve(data ? data.value : null);
+      });
+    });
+  }
+
+  getLatestData(key: string): Promise<any> {
+    return this.getData(key);
+  }
+
+  subscribeToData(key: string, callback: (data: any) => void): void {
+    this.gun.get(key).on((data) => {
+      if (data) {
+        callback(data.value);
+      }
+    });
+  }
+
+  unsubscribeFromData(key: string): void {
+    this.gun.get(key).off();
+  }
+}
