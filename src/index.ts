@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { createBlockchainPlugin } from './blockchain/BlockchainPlugin';
 import { AccessControl } from './data/AccessControl';
-import { P2PNode } from './p2p/P2PNode';
-import { FileDataStore } from './data/DataStore';
+import { createP2PNodePlugin } from './p2p/P2PNodePlugin';
+import { createDataStorePlugin } from './data/DataStorePlugin';
 import { RestApi } from './api/RestApi';
 
 dotenv.config();
@@ -13,9 +13,18 @@ async function main() {
     // ... blockchain configuration ...
   });
 
-  const dataStore = new FileDataStore(); // Or SQLiteDataStore
+  const dataStoreType = process.env.DATA_STORE_TYPE || 'file';
+  const dataStore = createDataStorePlugin(dataStoreType, {
+    dataDir: process.env.DATA_STORE_DIR || './data'
+  });
+
   const accessControl = new AccessControl(blockchain);
-  const p2pNode = new P2PNode(accessControl, dataStore, { useGun: true });
+
+  const p2pType = process.env.P2P_TYPE || 'gun';
+  const p2pNode = createP2PNodePlugin(p2pType, accessControl, dataStore, {
+    // ... P2P configuration ...
+  });
+
   const restApi = new RestApi(blockchain, p2pNode, accessControl, dataStore);
 
   try {
