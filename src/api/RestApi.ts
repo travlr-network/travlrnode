@@ -28,7 +28,7 @@ export class RestApi {
     this.accessControl = accessControl;
     this.dataStore = dataStore;
     this.veramo = veramo;
-    this.vcStore = new VerifiableCredentialStore(dataStore.getDataStorePlugin(), veramo);
+    this.vcStore = new VerifiableCredentialStore(dataStore, veramo);
     this.setupMiddleware();
     this.setupRoutes();
   }
