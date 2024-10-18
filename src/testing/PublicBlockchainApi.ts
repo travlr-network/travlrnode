@@ -96,6 +96,24 @@ export class PublicBlockchainApi {
       const hasDelegation = this.accessControl.canDelegate(fromDID as string, toDID as string, dataKey as string);
       res.json({ hasDelegation });
     });
+
+    this.app.get('/resolve-did/:did', (req, res) => {
+      const { did } = req.params;
+      // In a real implementation, this would fetch the DID document from your storage
+      // For this example, we'll return a mock DID document
+      const didDocument = {
+        '@context': 'https://www.w3.org/ns/did/v1',
+        id: did,
+        verificationMethod: [{
+          id: `${did}#keys-1`,
+          type: 'Ed25519VerificationKey2018',
+          controller: did,
+          publicKeyBase58: 'MOCK_PUBLIC_KEY'
+        }],
+        authentication: [`${did}#keys-1`]
+      };
+      res.json(didDocument);
+    });
   }
 
   start(port: number): void {

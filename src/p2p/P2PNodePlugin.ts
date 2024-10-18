@@ -1,6 +1,6 @@
 import { DataStore } from '../data/DataStore';
 import { AccessControl } from '../data/AccessControl';
-import { GunP2PNodePlugin } from './GunP2PNodePlugin';
+import GunP2PNodePlugin from './GunP2PNodePlugin';
 
 export interface P2PNodePlugin {
   start(): Promise<void>;

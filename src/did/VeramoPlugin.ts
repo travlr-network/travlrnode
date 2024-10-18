@@ -8,8 +8,9 @@ import { DIDResolverPlugin } from '@veramo/did-resolver';
 import { Resolver } from 'did-resolver';
 import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
 import { PublicBlockchainDIDProvider } from './PublicBlockchainDIDProvider';
+import { PublicBlockchainDIDResolver } from './PublicBlockchainDIDResolver';
 
-type VeramoPluginConfig = {
+interface VeramoPluginOptions {
   secretKey: string;
   didProvider: 'ethereum' | 'rest';
   ethereumConfig?: {
@@ -19,53 +20,72 @@ type VeramoPluginConfig = {
   restConfig?: {
     publicBlockchainApiUrl: string;
   };
-};
+}
 
 export class VeramoPlugin {
   private agent: any;
   private didProvider: string;
 
-  constructor(config: VeramoPluginConfig) {
-    const secretKey = config.secretKey;
-    this.didProvider = config.didProvider;
+  constructor(options: VeramoPluginOptions) {
+    const secretKey = options.secretKey;
+    this.didProvider = options.didProvider;
 
     const didProviders: Record<string, any> = {};
 
-    if (config.didProvider === 'ethereum') {
-      if (!config.ethereumConfig) {
+    if (options.didProvider === 'ethereum') {
+      if (!options.ethereumConfig) {
         throw new Error('Ethereum configuration is required when using Ethereum DID provider');
       }
       didProviders['did:ethr'] = new EthrDIDProvider({
         defaultKms: 'local',
-        network: config.ethereumConfig.network,
-        rpcUrl: `https://${config.ethereumConfig.network}.infura.io/v3/${config.ethereumConfig.infuraProjectId}`,
+        network: options.ethereumConfig.network,
+        rpcUrl: `https://${options.ethereumConfig.network}.infura.io/v3/${options.ethereumConfig.infuraProjectId}`,
       });
-    } else if (config.didProvider === 'rest') {
-      if (!config.restConfig) {
+    } else if (options.didProvider === 'rest') {
+      if (!options.restConfig) {
         throw new Error('REST API configuration is required when using REST DID provider');
       }
       didProviders['did:public'] = new PublicBlockchainDIDProvider({
-        apiBaseUrl: config.restConfig.publicBlockchainApiUrl,
+        apiBaseUrl: options.restConfig.publicBlockchainApiUrl,
       });
     }
+
+    const secretBox = new SecretBox(secretKey);
+
+    const ethrDidResolverConfig = {
+      networks: [
+        {
+          name: process.env.ETHEREUM_NETWORK || 'mainnet',
+          rpcUrl: `https://${process.env.ETHEREUM_NETWORK || 'mainnet'}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+        },
+      ],
+    };
+
+    const resolvers: Record<string, DIDResolver> = {
+      ...ethrDidResolver(ethrDidResolverConfig),
+    };
+
+    if (options.didProvider === 'rest') {
+      resolvers['did:public'] = new PublicBlockchainDIDResolver(options.restConfig!.publicBlockchainApiUrl).resolve;
+    }
+
+    const resolver = new Resolver(resolvers);
 
     this.agent = createAgent({
       plugins: [
         new KeyManager({
-          store: new KeyManagementSystem(new SecretBox(secretKey)),
+          store: new KeyManagementSystem(secretBox),
           kms: {
-            local: new KeyManagementSystem(new SecretBox(secretKey)),
+            local: new KeyManagementSystem(secretBox),
           },
         }),
         new DIDManager({
-          store: new KeyManagementSystem(new SecretBox(secretKey)),
-          defaultProvider: config.didProvider === 'ethereum' ? 'did:ethr' : 'did:public',
+          store: new KeyManagementSystem(secretBox),
+          defaultProvider: options.didProvider === 'ethereum' ? 'did:ethr' : 'did:public',
           providers: didProviders,
         }),
         new DIDResolverPlugin({
-          resolver: new Resolver({
-            ...ethrDidResolver({ infuraProjectId: config.ethereumConfig?.infuraProjectId }),
-          }),
+          resolver,
         }),
         new CredentialIssuer(),
         new W3cMessageHandler(),

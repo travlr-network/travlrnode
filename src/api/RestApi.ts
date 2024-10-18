@@ -3,7 +3,7 @@ import { BlockchainPlugin } from '../blockchain/BlockchainPlugin';
 import { P2PNodePlugin } from '../p2p/P2PNodePlugin';
 import { AccessControl } from '../data/AccessControl';
 import { DataStore } from '../data/DataStore';
-import { VerifiableCredentialStore } from '../data/VerifiableCredentialStore';
+import VerifiableCredentialStore from '../data/VerifiableCredentialStore';
 import { VeramoPlugin } from '../did/VeramoPlugin';
 
 export class RestApi {
