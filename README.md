@@ -5,11 +5,12 @@ TravlrNode is a flexible and modular blockchain-based data management system des
 ## Features
 
 - Support for multiple blockchain platforms (Ethereum, Sui, and a REST API fallback)
-- Decentralized identity (DID) management
+- Decentralized identity (DID) management using Veramo
 - Access control for data sharing between nodes
-- Peer-to-peer (P2P) networking capabilities
+- Peer-to-peer (P2P) networking capabilities using Gun
 - RESTful API for easy integration
 - Configurable through environment variables
+- File-based data storage
 
 ## Prerequisites
 
@@ -49,6 +50,24 @@ TravlrNode is a flexible and modular blockchain-based data management system des
 
    # For REST API fallback
    REST_API_BASE_URL=http://localhost:3000
+
+   # Data store configuration
+   DATA_STORE_TYPE=file
+   DATA_STORE_DIR=./data
+
+   # P2P configuration
+   P2P_TYPE=gun
+
+   # Veramo configuration
+   VERAMO_SECRET_KEY=your-veramo-secret-key
+   DID_PROVIDER=ethereum|rest
+
+   # Ethereum configuration (only needed if DID_PROVIDER is 'ethereum')
+   INFURA_PROJECT_ID=your-infura-project-id
+   ETHEREUM_NETWORK=mainnet|goerli|sepolia
+
+   # REST API configuration (only needed if DID_PROVIDER is 'rest')
+   PUBLIC_BLOCKCHAIN_API_URL=http://localhost:3000
    ```
 
 ## Usage
