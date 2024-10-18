@@ -5,6 +5,9 @@ import { AccessControl } from '../data/AccessControl';
 import { DataStore } from '../data/DataStore';
 import VerifiableCredentialStore from '../data/VerifiableCredentialStore';
 import { VeramoPlugin } from '../did/VeramoPlugin';
+import swaggerUi from 'swagger-ui-express';
+import redoc from 'redoc-express';
+import specs from './swagger';
 
 export class RestApi {
   private app: express.Application;
@@ -38,15 +41,71 @@ export class RestApi {
   }
 
   private setupRoutes(): void {
-    // P2P routes
+    /**
+     * @swagger
+     * /p2p/id:
+     *   get:
+     *     summary: Get the peer ID
+     *     tags: [P2P]
+     *     responses:
+     *       200:
+     *         description: Successful response
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 peerId:
+     *                   type: string
+     */
     this.app.get('/p2p/id', (req, res) => {
       res.json({ peerId: this.p2pNode.getPeerId() });
     });
 
+    /**
+     * @swagger
+     * /p2p/multiaddrs:
+     *   get:
+     *     summary: Get the multiaddresses
+     *     tags: [P2P]
+     *     responses:
+     *       200:
+     *         description: Successful response
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 multiaddrs:
+     *                   type: array
+     *                   items:
+     *                     type: string
+     */
     this.app.get('/p2p/multiaddrs', (req, res) => {
       res.json({ multiaddrs: this.p2pNode.getMultiaddrs() });
     });
 
+    /**
+     * @swagger
+     * /p2p/connect:
+     *   post:
+     *     summary: Connect to a peer
+     *     tags: [P2P]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               multiaddr:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Successful connection
+     *       500:
+     *         description: Connection failed
+     */
     this.app.post('/p2p/connect', async (req, res) => {
       const { multiaddr } = req.body;
       try {
@@ -57,6 +116,29 @@ export class RestApi {
       }
     });
 
+    /**
+     * @swagger
+     * /p2p/request-data:
+     *   post:
+     *     summary: Request data from a peer
+     *     tags: [P2P]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               dataKey:
+     *                 type: string
+     *               requesterDID:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Data request sent successfully
+     *       500:
+     *         description: Failed to send data request
+     */
     this.app.post('/p2p/request-data', async (req, res) => {
       const { dataKey, requesterDID } = req.body;
       try {
@@ -67,7 +149,25 @@ export class RestApi {
       }
     });
 
-    // DID creation route
+    /**
+     * @swagger
+     * /did/create:
+     *   post:
+     *     summary: Create a new DID
+     *     tags: [DID]
+     *     responses:
+     *       200:
+     *         description: DID created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 did:
+     *                   type: string
+     *       500:
+     *         description: Failed to create DID
+     */
     this.app.post('/did/create', async (req, res) => {
       try {
         const identifier = await this.veramo.createDID();
@@ -77,7 +177,31 @@ export class RestApi {
       }
     });
 
-    // VC issuance route
+    /**
+     * @swagger
+     * /vc/issue:
+     *   post:
+     *     summary: Issue a Verifiable Credential
+     *     tags: [Verifiable Credentials]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               issuerDID:
+     *                 type: string
+     *               subjectDID:
+     *                 type: string
+     *               claims:
+     *                 type: object
+     *     responses:
+     *       200:
+     *         description: Verifiable Credential issued successfully
+     *       500:
+     *         description: Failed to issue Verifiable Credential
+     */
     this.app.post('/vc/issue', async (req, res) => {
       const { issuerDID, subjectDID, claims } = req.body;
       try {
@@ -88,7 +212,27 @@ export class RestApi {
       }
     });
 
-    // VC verification route
+    /**
+     * @swagger
+     * /vc/verify:
+     *   post:
+     *     summary: Verify a Verifiable Credential
+     *     tags: [Verifiable Credentials]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               vc:
+     *                 type: object
+     *     responses:
+     *       200:
+     *         description: Verifiable Credential verification result
+     *       500:
+     *         description: Failed to verify Verifiable Credential
+     */
     this.app.post('/vc/verify', async (req, res) => {
       const { vc } = req.body;
       try {
@@ -99,7 +243,31 @@ export class RestApi {
       }
     });
 
-    // VC routes
+    /**
+     * @swagger
+     * /vc/generate:
+     *   post:
+     *     summary: Generate a Verifiable Credential
+     *     tags: [Verifiable Credentials]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               issuerDID:
+     *                 type: string
+     *               subjectDID:
+     *                 type: string
+     *               claims:
+     *                 type: object
+     *     responses:
+     *       200:
+     *         description: Verifiable Credential generated successfully
+     *       500:
+     *         description: Failed to generate Verifiable Credential
+     */
     this.app.post('/vc/generate', async (req, res) => {
       const { issuerDID, subjectDID, claims } = req.body;
       try {
@@ -110,6 +278,26 @@ export class RestApi {
       }
     });
 
+    /**
+     * @swagger
+     * /vc/{id}:
+     *   get:
+     *     summary: Get a Verifiable Credential by ID
+     *     tags: [Verifiable Credentials]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Verifiable Credential retrieved successfully
+     *       404:
+     *         description: Verifiable Credential not found
+     *       500:
+     *         description: Failed to retrieve Verifiable Credential
+     */
     this.app.get('/vc/:id', async (req, res) => {
       const { id } = req.params;
       try {
@@ -124,6 +312,18 @@ export class RestApi {
       }
     });
 
+    /**
+     * @swagger
+     * /vc/list:
+     *   get:
+     *     summary: List all Verifiable Credentials
+     *     tags: [Verifiable Credentials]
+     *     responses:
+     *       200:
+     *         description: List of Verifiable Credentials
+     *       500:
+     *         description: Failed to list Verifiable Credentials
+     */
     this.app.get('/vc/list', async (req, res) => {
       try {
         const vcList = await this.vcStore.listVCs();
@@ -143,7 +343,29 @@ export class RestApi {
       }
     });
 
-    // Dataset routes
+    /**
+     * @swagger
+     * /dataset:
+     *   post:
+     *     summary: Store a dataset
+     *     tags: [Dataset]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               datasetId:
+     *                 type: string
+     *               data:
+     *                 type: object
+     *     responses:
+     *       200:
+     *         description: Dataset stored successfully
+     *       500:
+     *         description: Failed to store dataset
+     */
     this.app.post('/dataset', async (req, res) => {
       const { datasetId, data } = req.body;
       try {
@@ -154,6 +376,26 @@ export class RestApi {
       }
     });
 
+    /**
+     * @swagger
+     * /dataset/{id}:
+     *   get:
+     *     summary: Get a dataset by ID
+     *     tags: [Dataset]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Dataset retrieved successfully
+     *       404:
+     *         description: Dataset not found
+     *       500:
+     *         description: Failed to retrieve dataset
+     */
     this.app.get('/dataset/:id', async (req, res) => {
       const { id } = req.params;
       try {
@@ -168,6 +410,18 @@ export class RestApi {
       }
     });
 
+    /**
+     * @swagger
+     * /dataset/list:
+     *   get:
+     *     summary: List all datasets
+     *     tags: [Dataset]
+     *     responses:
+     *       200:
+     *         description: List of datasets
+     *       500:
+     *         description: Failed to list datasets
+     */
     this.app.get('/dataset/list', async (req, res) => {
       try {
         const datasetList = await this.dataStore.listDatasets();
@@ -177,6 +431,24 @@ export class RestApi {
       }
     });
 
+    /**
+     * @swagger
+     * /dataset/{id}:
+     *   delete:
+     *     summary: Delete a dataset by ID
+     *     tags: [Dataset]
+     *     parameters:
+     *       - in: path
+     *         name: id
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Dataset deleted successfully
+     *       500:
+     *         description: Failed to delete dataset
+     */
     this.app.delete('/dataset/:id', async (req, res) => {
       const { id } = req.params;
       try {
@@ -185,6 +457,23 @@ export class RestApi {
       } catch (error) {
         res.status(500).json({ error: 'Failed to delete dataset' });
       }
+    });
+
+    // Serve Swagger UI
+    this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(specs));
+
+    // Serve ReDoc
+    this.app.get(
+      '/redocs',
+      redoc({
+        title: 'TravlrNode API Documentation',
+        specUrl: '/swagger.json',
+      })
+    );
+
+    // Serve Swagger JSON
+    this.app.get('/swagger.json', (req, res) => {
+      res.json(specs);
     });
   }
 
